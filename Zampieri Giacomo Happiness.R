@@ -298,12 +298,6 @@ corrplot(M1, is.corr = FALSE, method = "ellipse",bg="#72c475")
 
 corrplot(M1, is.corr = FALSE, method = "number",bg="#72c475")
 
-
-
-mean(ANZ_tab$GDP.per.capita)
-
-mean(ANZ_tab$Social.support)
-
 #Western Europe (correlazione maggiore felicità -> Average Corruption diretta)
  
 EU_tab = new_dataset %>%
@@ -327,12 +321,6 @@ corrplot(M2, is.corr = FALSE, method = "ellipse",bg="#72c475")
 
 corrplot(M2, is.corr = FALSE, method = "number",bg="#72c475")
 
-
-
-mean(EU_tab$GDP.per.capita)
-
-mean(EU_tab$Social.support)
-
 #Central and Eastern Europe (correlazione maggiore felicità -> Average Support)
 
 CEE_tab = new_dataset %>%
@@ -354,12 +342,6 @@ pairs(mat)
 corrplot(M3, is.corr = FALSE, method = "ellipse",bg="#72c475")
 
 corrplot(M3, is.corr = FALSE, method = "number",bg="#72c475")
-
-
-
-mean(CEE_tab$GDP.per.capita)
-
-mean(CEE_tab$Social.support)
 
 #Sub-Saharan Africa (correlazione maggiore felicità -> Average Corruption inversa)
 
@@ -384,11 +366,6 @@ corrplot(M4, is.corr = FALSE, method = "ellipse",bg="#72c475")
 
 corrplot(M4, is.corr = FALSE, method = "number",bg="white")
 
-
-mean(SSA_tab$GDP.per.capita)
-
-mean(SSA_tab$Social.support)
-
 #Middle East and Northern Africa (correlazione maggiore felicità -> Average Unemployment)
 
 MAF_tab = new_dataset %>%
@@ -411,10 +388,6 @@ corrplot(M5, is.corr = FALSE, method = "ellipse",bg="#72c475")
 
 corrplot(M5, is.corr = FALSE, method = "number",bg="#72c475")
 
-mean(MAF_tab$GDP.per.capita)
-
-mean(MAF_tab$Social.support)
-
 #Americas (correlazione maggiore felicità -> Average GDP)
 
 LAM_tab = new_dataset %>%
@@ -436,30 +409,7 @@ corrplot(M6, is.corr = FALSE, method = "ellipse",bg="#72c475")
 
 corrplot(M6, is.corr = FALSE, method = "number",bg="#72c475")
 
-
-mean(LAM_tab$GDP.per.capita)
-mean(LAM_tab$Social.support)
-
-############################
-
-region = c("Oceania and Asia","Western Europe","Central and Eastern Europe","Sub-Saharan Africa","Middle East and Northern Africa","Americas")
-
-Correlation.gdp = c(0.76,0.8,0.53,0.43,0.8,0.63)
-
-gdp.percapita = c(1.093,1.3621,1.0334,0.5103,1.1467,0.9535)
-
-Correlation.socialSupport = c(0.72,0.68,0.62,0.34,0.68,0.65)
-
-socialSupport = c(1.366545,1.4839,1.3443,0.96513,1.2076,1.34632)
-
-
-ggdata = data.frame(region,gdp.percapita,Correlation.gdp,socialSupport,Correlation.socialSupport)
-View(ggdata)
-
-p = ggplot(data=ggdata,mapping = aes(x = gdp.percapita, y = socialSupport,color=region,size=gdp.percapita)) +
-  geom_point()
-
-ggplotly(p)
+########################################################
 
 ##### Mappa Stati per felicità #####
 
