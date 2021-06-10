@@ -12,16 +12,13 @@ library(stringr)
 
 #Lettura datasets
 
-happiness = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/HappinesWorldReport.csv")
-
+happiness = read.csv("C:/Users/giaco/Desktop/progetto_esame/happiness/HappinesWorldReport.csv")
 View(happiness)
 
-alcoholConsumption = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/alccons/HappinessAlcoholConsumption.csv")
-
+alcoholConsumption = read.csv("C:/Users/giaco/Desktop/progetto_esame/happiness/alccons/HappinessAlcoholConsumption.csv")
 View(alcoholConsumption)
 
-unemployment = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/unemployment-rate.csv")
-
+unemployment = read.csv("C:/Users/giaco/Desktop/progetto_esame/happiness/unemployment-rate.csv")
 View(unemployment)
 
 #Modifica e creazione datasets
