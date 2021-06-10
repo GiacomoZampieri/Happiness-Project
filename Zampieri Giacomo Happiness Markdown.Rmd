@@ -1,0 +1,691 @@
+---
+title: "Cosa rende felice uno Stato?"
+author: "Giacomo Zampieri"
+date: "17/06/2021"
+output:
+  ioslides_presentation: 
+    css: ./style.css
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(cache = FALSE, message = FALSE, warning = FALSE)
+```
+
+## Librerie e Setup Dataset
+
+Librerie che verrano utilizzate:
+
+```{r, echo = TRUE}
+
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(leaflet)
+library(ggpubr)
+library(plotly)
+library(tidyr)
+library(tidyverse)
+library(maps)
+library(mapproj)
+library(stringr)
+
+```
+
+Lettura dei tre datasets che verranno utlizzati:
+
+```{r, echo = TRUE}
+
+happiness = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/2019.csv")
+
+alcoholConsumption = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/alccons/HappinessAlcoholConsumption.csv")
+
+unemployment = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/unemployment-rate.csv")
+
+```
+
+Per la realizzazione di questo progetto sono partito da un dataset trovato su Kaggle chaimato *World Happiness Report*. 
+
+Questo dataset è formato da 9 colonne e tra queste ho scelto quelle che ho ritenuto più importanti, ovvero:
+
+* Punteggio della felicità
+* GDP pro capite (che indica generalmente il livello di ricchezza delgi abitanti di uno Stato)
+* Supporto sociale dello Stato
+* Percezione della corruzione (più è bassa più lo Stato è corrotto)
+
+Già con questi quattro dati si potrebbe procedere con l'analisi, ma ho voluto aggiungerne degli altri. Infatti, mi sono chiesto se il consumo di alcolici potesse influenzare la felicità di uno Stato, e anche quanto il numero di disoccupati influenzi sulla felicità.
+
+Per questo motivo ho utilizzato nel progetto altri due dataset: *Happiness and Alcohol Consumption* e *Unemployment Rate*.
+
+Nel dataset sul consumo di alcolici ho considerato le seguenti variabili:
+
+1. Consumo di birra
+2. Consumo di vino
+3. Consumo di superalcolici
+4. La Regione  di appartenenza dello Stato
+
+Mentre nel dataset sulla disoccupazione ho selezionato solamente i dati relativi all'anno 2017.
+
+## Modifiche sui datasets e creazione del nuovo dataset principale
+
+Rinomino la quarta colonna del dataset *unemployment* e ne creo un nuovo filtrando solo le righe dove l'anno è uguale a 2017:
+
+```{r,echo = TRUE}
+colnames(unemployment)[4] = "UnemploymentRate"
+
+new_unemployment = unemployment %>%
+  filter(Year == "2017") %>%
+  select(Entity,UnemploymentRate)
+
+new_unemployment[1:10,]
+
+```
+
+Unisco *new_unemployment* al dataset *happiness* creando il nuovo dataset *happinessUnemp*:
+
+```{r,echo = TRUE}
+
+happinessUnemp = left_join(happiness, new_unemployment, 
+                           by = c("Country.or.region" = "Entity"))
+
+```
+
+Nel dataset *alcoholConsumption* seleziono solo le cinque colonne che ho ritenuto più importanti (Country,Region,Beer_PerCapita,Wine_PerCapita e Spirit_PerCapita) e le unisco al dataset *happinessUnemp*:
+
+```{r,echo = TRUE}
+
+new_alcohol = alcoholConsumption %>%
+  select(Country,Region,Beer_PerCapita,Wine_PerCapita,Spirit_PerCapita)
+
+new_dataset = inner_join(happinessUnemp,new_alcohol,
+                         by=c("Country.or.region" = "Country"))
+
+```
+
+Modifico l'ordine delle colonne in *new_dataset* e rimuovo le righe dov'è presente un valore NA, creando il nuovo dataset principale:
+
+```{r,echo = TRUE}
+
+new_dataset = new_dataset[c(1,2,11,3,4,5,6,7,8,9,10,12,13,14)]
+
+new_dataset = na.omit(new_dataset)
+
+```
+
+## Quali sono i 10 paesi più felici al mondo?
+
+```{r,echo = TRUE}
+
+top10 = head(new_dataset,10) %>%
+  select(Country.or.region,Region,Score)
+
+top10
+
+```
+
+Per avere una migliore visualizzazione di questa tabella è possibile creare una mappa ed evidenziare i Paesi più felici:
+
+```{r,echo = FALSE}
+
+worldtb = map_data("world") %>%
+  as_tibble()
+
+top10States = left_join(worldtb,top10,
+                        by=c("region" = "Country.or.region"))
+
+top10States %>%
+  ggplot(aes(long,lat,group=subregion)) +
+  geom_map(
+    aes(map_id=region),
+    map = top10States,
+    color = "gray80", fill = "grey80", size = 0.9
+  ) +
+  geom_polygon(aes(group=group,fill=Score), color="black") +
+  scale_fill_gradient2(high="yellow") +
+  theme_minimal()+
+  labs(
+    title = "Top 10 Stati più felici", x="", y="",fill="") +
+  theme(
+    plot.title = element_text(size=26,face="bold",color="#E6AF2E"),
+    legend.position = "right"
+  ) 
+
+```
+
+Da questa mappa è possibile vedere come gli Satati più felici, ad eccezione della Nuova Zelanda, si trovano tutti sopra l'equatore, in particolare la maggior parte di essi si trova in Europa. È intesressante precisare che, come vedremo in seguito, gli stati Scandinavi assieme all'Islanda e alla Danimarca sono sia i Paesi più felici in Europa, ma anche quelli con i più alti valori di supporto sociale e percezione della corruzione. Mentre per quanto riguarda il GDP non tutti questi Stati sono tra quelli che hanno i valori più alti.
+
+## Rappresentazione grafica dei principali indici per Regione
+
+Dal dataset utilizzato estraggo il vettore con i nomi delle Regioni:
+
+```{r,echo = TRUE}
+
+n_regions = new_dataset %>% 
+  group_by(Region) %>%
+  summarise(count = n())
+
+regions = as.vector(n_regions$Region)
+regions
+
+```
+
+Inizializzo i vettori che verranno utilizzati:
+
+```{r,echo = TRUE}
+
+media_happ = vector(mode="character", length=9)
+media_gdp = vector(mode="character", length=9)
+media_supp = vector(mode="character", length=9)
+media_corrup = vector(mode="character", length=9)
+media_unemp = vector(mode="character", length=9)
+media_wine = vector(mode="character", length=9)
+media_beer = vector(mode="character", length=9)
+media_spirit = vector(mode="character", length=9)
+
+```
+
+Creo i vettori contenenti le medie degli otto principali indici che verranno utilizzati per ciascuna Regione, ovvero punteggio felicità, gdp per capita, supporto sociale, disoccupazione, percezione della corruzione, consumo di vino, consumo di birra e consumo di superalcolici:
+
+```{r,echo = TRUE}
+
+for(i in 1:9){
+  
+  gg = new_dataset %>%
+    filter(Region == regions[i])
+  
+  media_happ[i] = mean(gg$Score)
+  
+  media_gdp[i] = mean(gg$GDP.per.capita)
+  
+  media_supp[i] = mean(gg$Social.support)
+  
+  media_corrup[i] = mean(gg$Perceptions.of.corruption)
+  
+  media_unemp[i] = mean(gg$UnemploymentRate)
+  
+  media_wine[i] = mean(gg$Wine_PerCapita)
+  
+  media_beer[i] = mean(gg$Beer_PerCapita)
+  
+  media_spirit[i] = mean(gg$Spirit_PerCapita)
+}
+
+media_happ
+
+```
+
+Per ogni vettore appena creato lo trasformo in un vettore di double e arrotondo ogni valore a 3 cifre diverse da zero:
+
+```{r,echo = TRUE}
+
+media_happ = as.double(media_happ)
+media_happ
+
+media_happ = signif(media_happ,3)
+media_happ
+
+media_gdp = as.double(media_gdp)
+
+media_gdp = signif(media_gdp,3)
+
+
+media_supp = as.double(media_supp)
+
+media_supp = signif(media_supp,3)
+
+
+media_corrup = as.double(media_corrup)
+
+media_corrup = signif(media_corrup,3)
+
+
+media_unemp = as.double(media_unemp)
+
+media_unemp = signif(media_unemp,3)
+
+
+media_wine = as.double(media_wine)
+
+media_wine = signif(media_wine,3)
+
+
+media_beer = as.double(media_beer)
+
+media_beer = signif(media_beer,3)
+
+
+media_spirit = as.double(media_spirit)
+
+media_spirit = signif(media_spirit)
+
+
+```
+
+Creo un nuovo dataset formato dai vettori appena creati:
+
+```{r,echo = TRUE}
+
+new_data = data.frame(regions,media_happ,media_gdp,media_supp,
+                      media_corrup,media_unemp,media_wine,
+                      media_beer,media_spirit)
+
+```
+
+
+Realizzo i grafici che rappresentanto graficamente i vettori trovati:
+
+```{r,echo = TRUE}
+
+g1 = new_data %>%
+  ggplot() + 
+  geom_bar(aes(x=regions, y=media_happ), stat="identity", 
+           fill="#FFFB1F") +
+  ggtitle("Average happiness") +
+  xlab("Regions") +
+  ylab("Average Happiness") +
+  coord_flip()
+
+g2 = new_data %>%
+  ggplot() + 
+  geom_bar(aes(x=regions, y=media_gdp), stat="identity", 
+           fill="#4CA8BD") +
+  ggtitle("Average GDP") +
+  xlab("Regions") +
+  ylab("Average GDP") +
+  coord_flip() 
+
+g3 = new_data %>%
+  ggplot() + 
+  geom_bar(aes(x=regions, y=media_supp), stat="identity", 
+           fill="#F97924") +
+  ggtitle("Average Social Support") +
+  xlab("Regions") +
+  ylab("Average Social Support") +
+  coord_flip() 
+
+g4 = new_data %>%
+  ggplot() + 
+  geom_bar(aes(x=regions, y=media_corrup), stat="identity", 
+           fill="#5E277C") +
+  ggtitle("Average Corruption") +
+  xlab("Regions") +
+  ylab("Average Corruption") +
+  coord_flip() 
+
+g5 = new_data %>%
+  ggplot() + 
+  geom_bar(aes(x=regions, y=media_unemp), stat="identity", 
+           fill="dimgray") +
+  ggtitle("Average Unemployment") +
+  xlab("Regions") +
+  ylab("Average Unemployment") +
+  coord_flip() 
+
+g6 = new_data %>%
+  ggplot() + 
+  geom_bar(aes(x=regions, y=media_wine), stat="identity",
+           fill="darkred") +
+  ggtitle("Average Wine Cons.") +
+  xlab("Regions") +
+  ylab("Average Wine") +
+  coord_flip() 
+
+g7 = new_data %>%
+  ggplot() + 
+  geom_bar(aes(x=regions, y=media_beer), stat="identity", 
+           fill="gold") +
+  ggtitle("Average Beer Cons.") +
+  xlab("Regions") +
+  ylab("Average Beer") +
+  coord_flip() 
+
+g8 = new_data %>%
+  ggplot() + 
+  geom_bar(aes(x=regions, y=media_spirit), stat="identity", 
+           fill="deepskyblue") +
+  ggtitle("Average Spirit Cons.") +
+  xlab("Regions") +
+  ylab("Average Spirit") +
+  coord_flip() 
+
+ggarrange(g1, g2, g3, g4,
+          ncol = 2, nrow = 2)
+
+ggarrange(g5, g6, g7, g8,
+          ncol = 2, nrow = 2)
+
+```
+
+Da questi grafici si può notare che la Regione formata da Australia e Nuova Zelanda è la regione mediamente più felice. Inoltre, questa Regione ha i valori più alti in supporto sociale e percezione della corruzione, mentre per quanto riguarda il GDP risulta essere terza, dietro Nord America e Europa dell'ovest. L'Europa dell'ovest,invece, si posiziona terza nel ranking sulla felicità, mentre risulta essere prima solamente nel consumo medio di vino, e seconda per GDP pro capita, supporto sociale e percezione della corruzione. 
+
+Guardando i grafici si nota subito che le tre regioni più felici sono anche quelle più ricche. Questo porterebbe a pensare che più uno Stato è ricco, più risulta essere felice. Guardando meglio però si può vedere che ci sono delle Regioni che risultano essere più felici di altre, ma meno ricche. Ad esempio, il Sud America risulta essere mediamente più felice di Nord Africa, Est e Sud dell'Asia e dell'Est Europa. Guardando invece il grafico sul GDP per capite medio, si può vedere che queste quattro Regioni hanno tutte valori più alti rispetto al Sud America.
+
+Quindi è possibile stabilire che **non è vero** che più gli abitanti di uno Stato sono ricchi, più essi sono felici. Allora cosa influenza maggiormente la felicità di uno Stato?
+
+## Cosa influenza maggiormente la felicità di uno Stato?
+
+### **Correlazione tra dati medi di tutte le Regioni:**
+
+```{r, results='hide'}
+
+x = matrix(c(new_data[,2],new_data[,3],new_data[,4],new_data[,5],
+             new_data[,6],new_data[,7],new_data[,8],new_data[,9]),
+             nrow = 9,ncol=8)
+
+dim(x) = c(9,8)
+colnames(x) = c("Average Happiness","Average GDP","Average Support",
+                "Average Corruption","Average Unemployment",
+                "Average Beer","Average Wine","Average Spirit")
+
+M = cor(x)
+
+corrplot(M, is.corr = FALSE, method = "ellipse",bg="#72c475")
+
+corrplot(M, is.corr = FALSE, method = "number",bg="#72c475")
+
+```
+
+La conferma che non è vero che uno Stato più è ricco più è felice, arriva proprio da questa matrice di correlazione che indica che quello che influenza di più sulla felicità è il **supporto sociale** che lo Stato offre ai propri cittadini. Il GDP pro capite si posiziona in seconda posizione a poca distanza dal supporto sociale, mentre in terza posizione trovaimo il valore di percezione della corruzione. È interessante notare che il consumo di vino e di birra ha una forte correlazione con la felicità, e questa correlazione è addirittura maggiore di quella tra disoccupazione e felicità.
+
+Ovviamente però queste correlazioni non sono uguali per tutti gli Stati. Per questo motivo ho voluto analizzare le correlazioni nelle varie Regioni. 
+
+Ho iniziato ad analizzare le Regioni partendo dall'Oceania, ma essendoci solamente due Stati ho deciso di unire l'*Oceania* assieme alle *Regioni asiatiche*:
+
+### **Correlazione tra dati medi di Oceania e Asia:**
+
+Ho iniziato ad analizzare le Regioni partendo dall'Oceania, ma essendoci solamente due Stati ho deciso di unire l'*Oceania* assieme alle *Regioni asiatiche*:
+
+```{r,echo = TRUE}
+
+ANZ_tab = new_dataset %>%
+  filter(Region == "Australia and New Zealand" | Region == "Eastern Asia" | Region == "Southeastern Asia") %>%
+  select(Score,GDP.per.capita,Social.support,Perceptions.of.corruption,
+         UnemploymentRate,Beer_PerCapita,Wine_PerCapita,Spirit_PerCapita)
+
+mat = matrix(c(ANZ_tab[,1],ANZ_tab[,2],ANZ_tab[,3],ANZ_tab[,4],ANZ_tab[,5],
+               ANZ_tab[,6],ANZ_tab[,7],ANZ_tab[,8]),nrow=11,ncol=8)
+
+dim(mat) = c(11,8)
+colnames(mat) = c("Average Happiness","Average GDP","Average Support",
+                  "Average Corruption","Average Unemployment","Average Beer",
+                  "Average Wine","Average Spirit")
+
+M1 = cor(mat)
+
+corrplot(M1, is.corr = FALSE, method = "number",bg="#72c475")
+```
+
+Analizzando la matrice risulta che la variabile che è maggiormente correlata con la felicità è il **consumo di vino**. In seconda posizione troviamo il consumo di birra mentre il GDP è la terza variabile maggiormente correlata con la felicità.
+
+### **Correlazione tra dati medi dell'Europa:**
+
+Successivamente ho analizzato la *regione europea*:
+
+```{r,echo = FALSE}
+
+EU_tab = new_dataset %>%
+  filter(Region == "Western Europe")%>%
+  select(Score,GDP.per.capita,Social.support,Perceptions.of.corruption,
+         UnemploymentRate,Beer_PerCapita,Wine_PerCapita,Spirit_PerCapita)
+
+
+mat2 = matrix(c(EU_tab[,1],EU_tab[,2],EU_tab[,3],EU_tab[,4],EU_tab[,5],
+               EU_tab[,6],EU_tab[,7],EU_tab[,8]),nrow=20,ncol=8)
+
+dim(mat2) = c(20,8)
+colnames(mat2) = c("Average Happiness","Average GDP","Average Support",
+                  "Average Corruption","Average Unemployment","Average Beer",
+                  "Average Wine","Average Spirit")
+
+M2 = cor(mat2)
+
+corrplot(M2, is.corr = FALSE, method = "number",bg="#72c475")
+
+```
+
+È subito possibile notare come il consumo di alcolici non influisca molto sulla felicità, a differenza della Regione precedentemente analizzata. In questo caso ciò che influisce più sulla felicità è la **percezione della corruzione**, ovvero meno uno Stato risulta corrotto più esso è felice. Le altre due correlazioni più forti sono quelle tra supporto sociale e felicità e tra disoccupazione e felicità. Il GDP invece si posiziona solamente in quarta posizione.
+
+### **Correlazione tra dati medi dell'Europa dell'Est:**
+
+La prossima Regione analizzata è quella dell'*Est Europa*:
+
+```{r,echo = FALSE}
+
+CEE_tab = new_dataset %>%
+  filter(Region == "Central and Eastern Europe")%>%
+  select(Score,GDP.per.capita,Social.support,Perceptions.of.corruption,
+         UnemploymentRate,Beer_PerCapita,Wine_PerCapita,Spirit_PerCapita)
+
+mat3 = matrix(c(CEE_tab[,1],CEE_tab[,2],CEE_tab[,3],CEE_tab[,4],CEE_tab[,5],
+               CEE_tab[,6],CEE_tab[,7],CEE_tab[,8]),nrow=24,ncol=8)
+
+dim(mat3) = c(24,8)
+colnames(mat3) = c("Average Happiness","Average GDP","Average Support",
+                  "Average Corruption","Average Unemployment","Average Beer",
+                  "Average Wine","Average Spirit")
+
+M3 = cor(mat3)
+
+
+corrplot(M3, is.corr = FALSE, method = "number",bg="#72c475")
+```
+
+In questo caso, anche se non c'è una relazione molto forte, la varaibile che influenza maggiormente la felicità è il **supporto sociale**. In seconda posizione è possibile trovare il GDP per capita, mentre in terza posizione poco al di sotto del GDP troviamo il consumo di birra medio per persona. Anche in Europa dell'est il consumo di alcool influenza la felicità di uno stato, in questo caso però a differenza della prima Regione, è la birra e non il vino che influenza maggiormente la felicità.
+
+### **Correlazione tra dati medi dell'Africa Sub-Sahariana:**
+
+Proseguendo con l'analisi ecco la regione dell'*Africa Subsahariana*:
+
+```{r,echo = FALSE}
+
+SSA_tab = new_dataset %>%
+  filter(Region == "Sub-Saharan Africa")%>%
+  select(Score,GDP.per.capita,Social.support,Perceptions.of.corruption,
+         UnemploymentRate,Beer_PerCapita,Wine_PerCapita,Spirit_PerCapita)
+
+mat4 = matrix(c(SSA_tab[,1],SSA_tab[,2],SSA_tab[,3],SSA_tab[,4],SSA_tab[,5],
+               SSA_tab[,6],SSA_tab[,7],SSA_tab[,8]),nrow=24,ncol=8)
+
+dim(mat4) = c(24,8)
+colnames(mat4) = c("Average Happiness","Average GDP","Average Support",
+                  "Average Corruption","Average Unemployment","Average Beer",
+                  "Average Wine","Average Spirit")
+
+M4 = cor(mat4)
+
+corrplot(M4, is.corr = FALSE, method = "number",bg="forestgreen")
+
+```
+
+Anche in questo caso, come in Europa, la correlazione maggiore con la felicità è quella della **percezione della corruzione**. Qua però, a differenza della regione europea, la correlazione è inversa quindi significa che più uno stato è corrotto, più esso risulta essere felice. Le altre correlazioni risultano abbasatnza basse, ma comunque troviamo in seconda posizione il GDP pro capite e in terza posizione, il supporto sociale.
+
+### **Correlazione tra dati medi del Nord Africa e Asia Occidentale:**
+
+Passiamo ora alla regione del Nord Africa e dell'*Asia Occidentale:*
+
+```{r,echo = FALSE}
+
+MAF_tab = new_dataset %>%
+  filter(Region == "Middle East and Northern Africa")%>%
+  select(Score,GDP.per.capita,Social.support,Perceptions.of.corruption,
+         UnemploymentRate,Beer_PerCapita,Wine_PerCapita,Spirit_PerCapita)
+
+matMAF = matrix(c(MAF_tab[,1],MAF_tab[,2],MAF_tab[,3],MAF_tab[,4],
+                  MAF_tab[,5],MAF_tab[,6],MAF_tab[,7],
+                  MAF_tab[,8]),nrow=10,ncol=8)
+
+dim(matMAF) = c(10,8)
+colnames(matMAF) = c("Average Happiness","Average GDP","Average Support",
+                     "Average Corruption","Average Unemployment",
+                     "Average Beer","Average Wine","Average Spirit")
+
+M5 = cor(matMAF)
+
+corrplot(M5, is.corr = FALSE, method = "number",bg="#72c475")
+
+```
+
+In questa Regione ciò che conbtribuisce alla felicità di uno Stato è il **tasso di disoccupazione**, infatti più esso è basso più gli Stati di questa regione sono felici. Successivamente troviamo con lo stesso valore di correlazione il GDP e il consumo di superalcolici.
+
+### **Correlazione tra dati medi delle Americhe:**
+
+Infine analizziamo la regione delle *Americhe*:
+
+```{r,echo = FALSE}
+
+LAM_tab = new_dataset %>%
+  filter(Region == "Latin America and Caribbean" | Region == "North America")%>%
+  select(Score,GDP.per.capita,Social.support,Perceptions.of.corruption,
+         UnemploymentRate,Beer_PerCapita,Wine_PerCapita,Spirit_PerCapita)
+
+
+matLAM = matrix(c(LAM_tab[,1],LAM_tab[,2],LAM_tab[,3],LAM_tab[,4],
+                  LAM_tab[,5],LAM_tab[,6],LAM_tab[,7],
+                  LAM_tab[,8]),nrow=22,ncol=8)
+
+dim(matLAM) = c(22,8)
+colnames(matLAM) = c("Average Happiness","Average GDP","Average Support",
+                     "Average Corruption","Average Unemployment","Average Beer",
+                     "Average Wine","Average Spirit")
+
+M6 = cor(matLAM)
+
+corrplot(M6, is.corr = FALSE, method = "number",bg="#72c475")
+
+```
+
+Come si può vedere dal grafico, questa regione è l'unica dove il **GDP per capita** è la variabile che è più correlata con la felicità. In questo caso c'è una bassa correlazione tra felicità e consumo di alcolici, e inversamente a quanto avviene nelle altre Regioni, meno si fa uso di superalcolici, più lo Stato è felice.
+
+## Visualizzazione dei valori di felicità,gdp,supporto sociale e corruzione attraverso delle mappe
+
+Prima di tutto creo il dataser *worldtb* contenente le coordinate geografiche di ciascuna regione degli Stati del mondo:
+
+```{r,echo = TRUE}
+
+worldtb = map_data("world") %>%
+  as_tibble()
+
+```
+
+Successivamente cambio dei nomi di certi Stati all'interno del dataset *happiness* per far si che siano uguali a quelli del dataset *worldtb*, e infine unisco i due dataset creando un nuovo dataser *happinessMap*:
+
+```{r,echo = TRUE}
+
+class(happiness$Country.or.region)
+
+happiness$Country.or.region[happiness$Country.or.region == "United States"] <- "USA"
+
+happiness$Country.or.region[happiness$Country.or.region == "United Kingdom"] <- "UK"
+
+happiness$Country.or.region[happiness$Country.or.region == "Congo (Kinshasa)"] <- "Democratic Republic of the Congo"
+
+happiness$Country.or.region[happiness$Country.or.region == "Congo (Brazzaville)"] <- "Republic of Congo"
+
+happiness$Country.or.region[happiness$Country.or.region == "North Macedonia"] <- "Macedonia"
+
+View(happiness)
+
+happinessMap = left_join(worldtb,happiness,by=c("region" = "Country.or.region"))
+View(happinessMap)
+
+```
+
+Con questo nuovo dataset costruisco le varie mappe iniziando da quella sulla felicità. Anche da questa mappa si possono visualizzare gli Stati più felici (maggiormente colorati di arancione), in particolare si può notare che lo Stato più arancione è proprio la Finlandia, che come è stato precedentemente visualizzato è lo Stato più feice del mondo:
+
+```{r,echo = TRUE}
+
+happinessMap %>%
+  ggplot(aes(long,lat,group=subregion)) +
+  geom_map(
+    aes(map_id=region),
+    map = happinessMap,
+    color = "gray80", fill = "grey80", size = 0.9
+  ) +
+  geom_polygon(aes(group=group,fill=Score), color="black") +
+  scale_fill_gradient2(low="black",mid="lightyellow",high="darkorange1",midpoint = 5.4) +
+  theme_minimal()+
+  labs(
+    title = "Mappa felicità", x="", y="",fill="") +
+  theme(
+    plot.title = element_text(size=26,face="bold",color="darkorange1"),
+    legend.position = "right"
+  ) 
+
+```
+
+Da questa mappa è possibile visualizzare che le zone meno felici sono l'Africa e l'Asia Centrale e Meridionale. Mentre, come già visto in precedenza,le Regioni più felici sono l'Oceania, il SUd e Nord America e l'Europa.
+
+Successivamente realizzo la mappa sul GDP pro capite:
+
+```{r,echo = TRUE}
+happinessMap %>%
+  ggplot(aes(long,lat,group=subregion)) +
+  geom_map(
+    aes(map_id=region),
+    map = happinessMap,
+    color = "gray80", fill = "grey80", size = 0.9
+  ) +
+  geom_polygon(aes(group=group,fill=GDP.per.capita), color="black") +
+  scale_fill_gradient2(low="white",mid="#3F74CA",high="black",midpoint = 0.82) +
+  theme_minimal()+
+  labs(
+    title = "Stati per GDP Pro Capita", x="", y="",fill="") +
+  theme(
+    plot.title = element_text(size=26,face="bold",color="#3F74CA"),
+    legend.position = "right"
+  ) 
+
+```
+È possibile visualizzare come le tre aree più ricche sono il Nord America l'Europa e l'Oceania, mentre le più povere sono l'Africa e l'Asia Meridionale.
+
+La terza mappa riguarda il supporto sociale degli Stati,dove in giallo sono rappresentati gli Satati con i più alti indici di supporto sociale:
+
+```{r,echo = TRUE}
+happinessMap %>%
+  ggplot(aes(long,lat,group=subregion)) +
+  geom_map(
+    aes(map_id=region),
+    map = happinessMap,
+    color = "gray80", fill = "grey80", size = 0.9
+  ) +
+  geom_polygon(aes(group=group,fill=Social.support), color="black") +
+  scale_fill_gradient2(low="black",mid="#F96D10",high="yellow",midpoint = 0.8) +
+  theme_minimal()+
+  labs(
+    title = "Stati per Supporto Sociale", x="", y="",fill="") +
+  theme(
+    plot.title = element_text(size=26,face="bold",color="#F96D10"),
+    legend.position = "right"
+  ) 
+```
+
+Come per la felicità è possibile determinare che le regioni di Asia Meridionale, Asia Centrale e Africa, sono quelle che offrono il più basso supporto sociale. Anche con queste mappe è quindi visibile come il supporto sociale è ciò che più influisce sulla felicità di uno Stato.
+
+Infine creo la mappa per visualizzare i dati sulla corruzione. più il colore dello Stato è scuro, più in quello stato è presente un alto livello di corruzione:
+
+```{r,echo = TRUE}
+happinessMap %>%
+  ggplot(aes(long,lat,group=subregion)) +
+  geom_map(
+    aes(map_id=region),
+    map = happinessMap,
+    color = "gray80", fill = "grey80", size = 0.9
+  ) +
+  geom_polygon(aes(group=group,fill=Perceptions.of.corruption), color="black") +
+  scale_fill_gradient2(low="black",mid="#F96D10",high="chartreuse",midpoint = 0.23) +
+  theme_minimal()+
+  labs(
+    title = "Stati per Percezionde della Corruzione", x="", y="",fill="") +
+  theme(
+    plot.title = element_text(size=26,face="bold",color="#F96D10"),
+    legend.position = "right"
+  ) 
+
+
+```
+Come si è visto prima nei grafici, da questa mappa si può visualizzare che l'area maggiormente corrotta è l'Europa dell'Est, maggiormente rispetto anche all'Africa e al Sud America.
+
+## Conclusioni
+
+In conclusione, ciò che rende un Stato più felice di un altro dipende da molti fattori, e varia da Stato a Stato. Quello che però risulta da questa analisi è che la ricchezza media non è sempre ciò che influisce maggiormente sulla felicità di uno Stato,ma ciò che in generale influisce di più è il supporto sociale. Anche il consumo di alcolici in certe regioni ha una buona correlazione con la felicità, delle volte anche più del GDP o del supporto sociale. Infine risulta che per essere maggiormente felice uno Stato deve avere alti valori in: **supporto sociale**, **GDP pro capite** e **percezione della corruzione**.
