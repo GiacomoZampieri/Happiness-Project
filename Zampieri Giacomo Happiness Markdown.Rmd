@@ -37,7 +37,7 @@ Lettura dei tre datasets che verranno utlizzati:
 
 ```{r, echo = TRUE}
 
-happiness = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/2019.csv")
+happiness = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/HappinesWorldReport.csv")
 
 alcoholConsumption = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/alccons/HappinessAlcoholConsumption.csv")
 
