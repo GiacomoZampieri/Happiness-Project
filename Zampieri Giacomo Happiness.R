@@ -12,7 +12,7 @@ library(stringr)
 
 #Lettura datasets
 
-happiness = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/2019.csv")
+happiness = read.csv("C:/Users/giaco/Desktop/progetto_esame/happines/HappinesWorldReport.csv")
 
 View(happiness)
 
@@ -50,14 +50,14 @@ View(new_dataset)
 new_dataset = na.omit(new_dataset)
 View(new_dataset)
 
-##### Top 10 Paesi più felici #####
+##### Top 10 Paesi piÃ¹ felici #####
 
 top10 = head(new_dataset,10) %>%
   select(Country.or.region,Region,Score)
 
 top10
 
-##### Mappa Top 10 Paesi più felici #####
+##### Mappa Top 10 Paesi piÃ¹ felici #####
 
 worldtb = map_data("world") %>%
   as_tibble()
@@ -76,7 +76,7 @@ top10States %>%
   scale_fill_gradient2(high="yellow") +
   theme_minimal()+
   labs(
-    title = "Top 10 Stati più felici", x="", y="",fill="") +
+    title = "Top 10 Stati piÃ¹ felici", x="", y="",fill="") +
   theme(
     plot.title = element_text(size=26,face="bold",color="#E6AF2E"),
     legend.position = "right"
@@ -275,7 +275,7 @@ corrplot(M, is.corr = FALSE, method = "number",bg="#A5AC20")
 
 ########## correlazione tra dati medi per singola regione #####################
 
-#Oceania and Asia (correlazione maggiore felicità -> Average Wine Consumption)
+#Oceania and Asia (correlazione maggiore felicitÃ  -> Average Wine Consumption)
 
 ANZ_tab = new_dataset %>%
   filter(Region == "Australia and New Zealand" | Region == "Eastern Asia" | Region == "Southeastern Asia") %>%
@@ -304,7 +304,7 @@ mean(ANZ_tab$GDP.per.capita)
 
 mean(ANZ_tab$Social.support)
 
-#Western Europe (correlazione maggiore felicità -> Average Corruption diretta)
+#Western Europe (correlazione maggiore felicitÃ  -> Average Corruption diretta)
  
 EU_tab = new_dataset %>%
   filter(Region == "Western Europe") %>%
@@ -333,7 +333,7 @@ mean(EU_tab$GDP.per.capita)
 
 mean(EU_tab$Social.support)
 
-#Central and Eastern Europe (correlazione maggiore felicità -> Average Support)
+#Central and Eastern Europe (correlazione maggiore felicitÃ  -> Average Support)
 
 CEE_tab = new_dataset %>%
   filter(Region == "Central and Eastern Europe")
@@ -361,7 +361,7 @@ mean(CEE_tab$GDP.per.capita)
 
 mean(CEE_tab$Social.support)
 
-#Sub-Saharan Africa (correlazione maggiore felicità -> Average Corruption inversa)
+#Sub-Saharan Africa (correlazione maggiore felicitÃ  -> Average Corruption inversa)
 
 SSA_tab = new_dataset %>%
   filter(Region == "Sub-Saharan Africa")%>%
@@ -389,7 +389,7 @@ mean(SSA_tab$GDP.per.capita)
 
 mean(SSA_tab$Social.support)
 
-#Middle East and Northern Africa (correlazione maggiore felicità -> Average Unemployment)
+#Middle East and Northern Africa (correlazione maggiore felicitÃ  -> Average Unemployment)
 
 MAF_tab = new_dataset %>%
   filter(Region == "Middle East and Northern Africa")%>%
@@ -415,7 +415,7 @@ mean(MAF_tab$GDP.per.capita)
 
 mean(MAF_tab$Social.support)
 
-#Americas (correlazione maggiore felicità -> Average GDP)
+#Americas (correlazione maggiore felicitÃ  -> Average GDP)
 
 LAM_tab = new_dataset %>%
   filter(Region == "Latin America and Caribbean" | Region == "North America")%>%
@@ -461,7 +461,7 @@ p = ggplot(data=ggdata,mapping = aes(x = gdp.percapita, y = socialSupport,color=
 
 ggplotly(p)
 
-##### Mappa Stati per felicità #####
+##### Mappa Stati per felicitÃ  #####
 
 worldtb = map_data("world") %>%
   as_tibble()
@@ -494,7 +494,7 @@ happinessMap %>%
   scale_fill_gradient2(low="black",high="#FFFB1F",midpoint = 5.4) +
   theme_minimal()+
   labs(
-    title = "Top 10 Stati più felici", x="", y="",fill="") +
+    title = "Top 10 Stati piÃ¹ felici", x="", y="",fill="") +
   theme(
     plot.title = element_text(size=26,face="bold",color="#E6AF2E"),
     legend.position = "right"
