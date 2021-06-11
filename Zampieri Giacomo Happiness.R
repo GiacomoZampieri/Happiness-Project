@@ -249,10 +249,10 @@ g8 = new_data %>%
    coord_flip()
 
 
-ggarrange(g1, g2, g3, g4,g5,g6,g7,g8,
-          ncol = 2, nrow = 4)
-
 ggarrange(g1, g2, g3, g4,
+          ncol = 2, nrow = 2)
+
+ggarrange(g5,g6,g7,g8,
           ncol = 2, nrow = 2)
 
 ########## correlazione tra dati medi di tutte le regioni #####################
