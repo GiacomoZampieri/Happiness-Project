@@ -689,3 +689,11 @@ Come si è visto prima nei grafici, da questa mappa si può visualizzare che l'a
 ## Conclusioni
 
 In conclusione, ciò che rende un Stato più felice di un altro dipende da molti fattori, e varia da Stato a Stato. Quello che però risulta da questa analisi è che la ricchezza media non è sempre ciò che influisce maggiormente sulla felicità di uno Stato,ma ciò che in generale influisce di più è il supporto sociale. Anche il consumo di alcolici in certe regioni ha una buona correlazione con la felicità, delle volte anche più del GDP o del supporto sociale. Infine risulta che per essere maggiormente felice uno Stato deve avere alti valori in: **supporto sociale**, **GDP pro capite** e **percezione della corruzione**.
+
+## Fonti
+
+- Per i dataset sulla felicità e il consumo di alcool: https://www.kaggle.com/
+- Per il dataset sulla disoccupazione: https://ourworldindata.org/
+
+- Per la costruzione delle mappe: https://eriqande.github.io/rep-res-web/lectures/making-maps-with-R.html
+- Altro materiale: http://users.dimi.uniud.it/~massimo.franceschet/ds/plugandplay/log.html
