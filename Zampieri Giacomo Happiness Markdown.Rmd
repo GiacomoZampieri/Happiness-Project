@@ -637,6 +637,7 @@ happinessMap %>%
   ) 
 
 ```
+
 È possibile visualizzare come le tre aree più ricche sono il Nord America l'Europa e l'Oceania, mentre le più povere sono l'Africa e l'Asia Meridionale.
 
 La terza mappa riguarda il supporto sociale degli Stati,dove in giallo sono rappresentati gli Satati con i più alti indici di supporto sociale:
